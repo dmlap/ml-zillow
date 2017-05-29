@@ -4,59 +4,49 @@ import numpy as np
 import random
 import math
 
+def input_fn(df):
+    columns = { k: tf.constant(df[k].values) for k in [col.name for col in feature_columns] if not k.endswith('_bucketized') }
+    output = tf.constant(df['logerror'].values)
+    return columns, output
+
 print 'Reading training data...'
 train_df = pd.read_csv('data/merged_train_2016.csv', parse_dates=['transactiondate'])
 train_df['taxamount'].fillna(train_df['taxamount'].mean(), inplace=True)
 train_df['bathroomcnt'].fillna(train_df['bathroomcnt'].mean(), inplace=True)
 train_df['bedroomcnt'].fillna(train_df['bedroomcnt'].mean(), inplace=True)
 
-W = tf.Variable(tf.zeros([3, 1]), tf.float32)
-b = tf.Variable(tf.zeros([1]), tf.float32)
+feature_columns = [
+    tf.contrib.layers.real_valued_column('taxamount'),
+    tf.contrib.layers.real_valued_column('bathroomcnt'),
+    tf.contrib.layers.real_valued_column('bedroomcnt')
+]
+feature_columns.append(tf.contrib.layers.bucketized_column(feature_columns[1], boundaries=range(0, 10)))
+feature_columns.append(tf.contrib.layers.bucketized_column(feature_columns[2], boundaries=range(0, 10)))
+feature_columns.append(tf.contrib.layers.crossed_column([feature_columns[3], feature_columns[4]], hash_bucket_size=100))
 
-x = tf.placeholder(tf.float32, shape=[None, 3])
-output = tf.matmul(x, W) + b
-log_error = tf.placeholder(tf.float32)
-
-loss = tf.reduce_sum(tf.squared_difference(output, log_error))
-# optimize = tf.train.GradientDescentOptimizer(0.000001).minimize(loss)
-optimize = tf.train.AdamOptimizer(learning_rate=1e-6).minimize(loss)
-
-session = tf.Session()
-session.run(tf.global_variables_initializer())
+model = tf.contrib.learn.LinearRegressor(feature_columns=feature_columns,
+                                         model_dir='linear-regressor-models')
 print 'Training...'
-for i in range(0, len(train_df), 10):
-    _, _, w_, b_ = session.run([optimize, output, W, b], {
-        x: zip(train_df['taxamount'].values[i:i + 10],
-               train_df['bathroomcnt'].values[i:i + 10],
-               train_df['bedroomcnt'].values[i:i + 10]),
-        log_error: [[o] for o in train_df['logerror'].values[i:i + 10]]
-    })
-    if i % 1000 == 0:
-        print w_, b_
+model.fit(input_fn=lambda: input_fn(train_df), steps=100)
 
 print 'Reading evaluation data...'
 eval_df = pd.read_csv('data/merged_eval_2016.csv', parse_dates=['transactiondate'])
 eval_df['taxamount'].fillna(eval_df['taxamount'].mean(), inplace=True)
 eval_df['bathroomcnt'].fillna(eval_df['bathroomcnt'].mean(), inplace=True)
 eval_df['bedroomcnt'].fillna(eval_df['bedroomcnt'].mean(), inplace=True)
-outs, log_errors, xs, overall_loss = session.run([output, log_error, x, loss], {
-    x: zip(eval_df['taxamount'].values,
-           eval_df['bathroomcnt'].values,
-           eval_df['bedroomcnt'].values),
-    log_error: [[o] for o in eval_df['logerror'].values]
-})
+results = model.evaluate(input_fn=lambda: input_fn(eval_df), steps=45407)
 
+print 'mean squared loss: %f' % results['loss']
+print 'total loss: %f' % (results['loss'] * 45407)
 
-print 'Sum of squared differences: %f' % overall_loss
-print 'Normalized loss: %f' % (overall_loss / len(outs))
-zipped = []
-for i in range(len(outs)):
-    zipped.append((outs[i][0], log_errors[i][0], xs[i][0], xs[i][1], xs[i][2]))
+# print 'Sum of squared differences: %f' % overall_loss
+# print 'Normalized loss: %f' % (overall_loss / len(outs))
+# zipped = []
+# for i in range(len(outs)):
+#     zipped.append((outs[i][0], log_errors[i][0], xs[i][0], xs[i][1], xs[i][2]))
 
-samples = random.sample(zipped, 10)
-print 'Selected results:'
-print '{:<20}{:<20}'.format('output', 'log_error')
-for k in samples:
-    print '{:<20f}{:<20f}'.format(k[0], k[1])
-
-
+# samples = random.sample(zipped, 10)
+# print 'Selected results:'
+# print '{:<20}{:<20}'.format('output', 'log_error')
+# for k in samples:
+#     print '{:<20f}{:<20f}'.format(k[0], k[1])
