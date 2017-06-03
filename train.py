@@ -1,7 +1,6 @@
 import tensorflow as tf
 import pandas as pd
 import numpy as np
-import random
 import math
 
 def input_fn(df):
@@ -14,10 +13,7 @@ def input_fn(df):
 
 def fillna_df(df):
     for k in df:
-        print 'kind: "%s" kind.type: %s kind[0]: "%s"' % (df[k].dtype.kind, type(df[k].dtype.kind), df[k].dtype.kind[0])
-
         if df[k].dtype.kind in 'iufc':
-            print 'fillna("%s")' % k
             df[k].fillna(df[k].mean() if not math.isnan(df[k].mean()) else 0, inplace=True)
 
 print 'Reading training data...'
@@ -47,5 +43,12 @@ eval_df = pd.read_csv('data/merged_eval_2016.csv', parse_dates=['transactiondate
 fillna_df(eval_df)
 results = model.evaluate(input_fn=lambda: input_fn(train_df), steps=5)
 
-print 'mean squared loss: %f' % results['loss']
 print results
+
+input_samples = train_df.sample(n=10)
+output_samples = list(model.predict(input_fn=lambda: input_fn(input_samples),
+                                    outputs=None))
+print 'Selected Results'
+print '{:<20}{:<20}'.format('prediction', 'actual')
+for k in range(len(output_samples)):
+    print '{:<20f}{:<20f}'.format(output_samples[k], input_samples['logerror'].values[k])
