@@ -22,11 +22,12 @@ print 'Results:'
 print results
 print results2
 print model.get_variable_names()
-print 'Logits Layer:'
-for weight in model.get_variable_value('dnn/logits/weights').flatten():
-    print '  %fx + %f' % (weight, model.get_variable_value('dnn/logits/biases')[0])
-print model.get_variable_value('dnn/hiddenlayer_0/weights')
-print model.get_variable_value('dnn/hiddenlayer_0/biases')
+# models.print_dnn(model)
+# print 'Logits:'
+# for weight in model.get_variable_value('dnn/logits/weights').flatten():
+#     print '  {: .3f}x + {: .3f}'.format(weight, model.get_variable_value('dnn/logits/biases')[0])
+# print model.get_variable_value('dnn/hiddenlayer_0/weights')
+# print model.get_variable_value('dnn/hiddenlayer_0/biases')
 
 input_samples = eval_df_outl.sample(n=20)
 

@@ -2,6 +2,8 @@ import tensorflow as tf
 import math
 import numpy as np
 
+# --- Input ---
+
 def input_fn(df):
     columns = {
         k: tf.constant(df[k].values)
@@ -20,6 +22,42 @@ def fillna_df(df):
         if df[k].dtype.kind in 'iufc' and df[k].name != 'logerror':
             df[k].fillna(df[k].mean() if not math.isnan(df[k].mean()) else 0, inplace=True)
             df[k]=(df[k]-df[k].mean())/df[k].std()
+
+# --- Debugging ---
+
+def _print_layer(weights, biases):
+    bias = biases[0]
+    if len(biases) != 1:
+        print 'len biases: {:d} len weights: {:d}'.format(len(biases), len(weights.flatten()))
+
+    print weights
+    print biases
+
+    # for j in range(len(weights[0])):
+    #     for range(len(weights)):
+
+    for weight in weights:
+        print ' '.join(map(lambda w: '{: .3f}'.format(w), weight))
+    # for weight in weights.flatten():
+    #     print '  {: .3f}x + {: .3f}'.format(weight, bias)
+
+def print_dnn(dnn):
+    num_hidden_layers = len(filter(lambda name: name.startswith('dnn/hiddenlayer') and name.endswith('weights'),
+                                   dnn.get_variable_names()))
+    print num_hidden_layers
+
+    for i in range(num_hidden_layers):
+        weights_var = 'dnn/hiddenlayer_{:d}/weights'.format(i)
+        biases_var = 'dnn/hiddenlayer_{:d}/biases'.format(i)
+        print 'layer {:d}'.format(i)
+        _print_layer(dnn.get_variable_value(weights_var),
+                     dnn.get_variable_value(biases_var))
+
+    print 'logits'
+    _print_layer(dnn.get_variable_value('dnn/logits/weights'),
+                 dnn.get_variable_value('dnn/logits/biases'))
+
+# --- Model ---
 
 feature_columns = [
     tf.contrib.layers.real_valued_column('taxamount', dtype=tf.float32, dimension=1),
