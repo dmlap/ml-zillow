@@ -4,14 +4,14 @@ import numpy as np
 
 # --- Input ---
 
-def input_fn(df):
+def input_fn(df, output_label='logerror'):
     columns = {
         k: tf.constant(df[k].values)
         for k in [col.name for col in feature_columns] if not k.endswith('_bucketized')
     }
     print 'variance:'
-    print df['logerror'].var()
-    output = tf.constant(df['logerror'].values, dtype=tf.float64)
+    print df[output_label].var()
+    output = tf.constant(df[output_label].values, dtype=tf.float64)
 
     print 'columns, output'
     print columns, output
@@ -22,6 +22,15 @@ def fillna_df(df):
         if df[k].dtype.kind in 'iufc' and df[k].name != 'logerror':
             df[k].fillna(df[k].mean() if not math.isnan(df[k].mean()) else 0, inplace=True)
             df[k]=(df[k]-df[k].mean())/df[k].std()
+
+def add_outlier_column(df):
+    """Adds a new column that is zero-valued if the logerror of the
+    row is within one standard deviation of the mean."""
+
+    mean = df['logerror'].mean()
+    std_deviation = df['logerror'].std()
+    df['is_outlier'] = df.apply(lambda row: abs(row['logerror'] - mean) > std_deviation, axis=1)
+    return df
 
 # --- Debugging ---
 
@@ -88,3 +97,7 @@ dnn_regressor = tf.contrib.learn.DNNRegressor(feature_columns = feature_columns,
                                               rho=0.99
                                               )
                                               )
+
+outlier_classifier = tf.contrib.learn.DNNClassifier(hidden_units=[128, 128, 128],
+                                                    feature_columns=feature_columns,
+                                                    model_dir='./dnn-outlier-classifier')
