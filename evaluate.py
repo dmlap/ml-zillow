@@ -7,10 +7,11 @@ print 'Reading evaluation data...'
 eval_df = pd.read_csv('data/merged_eval_2016_total.csv', parse_dates=['transactiondate'])
 models.fillna_df(eval_df)
 
-models.add_outlier_column(eval_df)
+eval_df = models.add_outlier_column(eval_df)
+eval_df = models.add_sign_column(eval_df)
 
-model = models.outlier_classifier
-results = model.evaluate(input_fn=lambda: models.input_fn(eval_df, 'is_outlier'), steps=1)
+model = models.logsign_classifier
+results = model.evaluate(input_fn=lambda: models.input_fn(eval_df, 'logsign'), steps=1)
 # results = model.evaluate(input_fn=lambda: models.input_fn(eval_df_outl), steps=1)
 # results2 = model.evaluate(input_fn=lambda: models.input_fn(eval_df), steps=1)
 
@@ -26,7 +27,7 @@ print model.get_variable_names()
 
 input_samples = eval_df.sample(n=20)
 
-output_samples = list(model.predict(input_fn=lambda: models.input_fn(input_samples, 'is_outlier'),
+output_samples = list(model.predict(input_fn=lambda: models.input_fn(input_samples, 'logsign'),
                                     outputs=None))
 print 'Selected Results'
 print '{:<20}{:<20}{:<20}{:<20}{:<20}'.format('totalinfo', 'taxamount', 'yearbuilt', 'prediction', 'actual')

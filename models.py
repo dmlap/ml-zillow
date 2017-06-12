@@ -32,6 +32,13 @@ def add_outlier_column(df):
     df['is_outlier'] = df.apply(lambda row: abs(row['logerror'] - mean) > std_deviation, axis=1)
     return df
 
+def add_sign_column(df):
+    """Adds a new column that is True if the logerror of the row is
+    positive and False otherwise."""
+
+    df['logsign'] = df.apply(lambda row: row['logerror'] >= 0, axis=1)
+    return df
+
 # --- Debugging ---
 
 def _print_layer(weights, biases):
@@ -101,3 +108,7 @@ dnn_regressor = tf.contrib.learn.DNNRegressor(feature_columns = feature_columns,
 outlier_classifier = tf.contrib.learn.DNNClassifier(hidden_units=[128, 128, 128],
                                                     feature_columns=feature_columns,
                                                     model_dir='./dnn-outlier-classifier')
+
+logsign_classifier = tf.contrib.learn.DNNClassifier(hidden_units=[128, 128, 128],
+                                                    feature_columns=feature_columns,
+                                                    model_dir='./dnn-logsign-classifier')
